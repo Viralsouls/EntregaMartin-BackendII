@@ -1,0 +1,80 @@
+<h1>🛒 Tu Carrito</h1>
+<a href="/">⬅️ Volver al catálogo</a>
+<hr>
+
+{{#if cart.products.length}}
+  <ul>
+    {{#each cart.products}}
+      <li>
+        <h3>{{this.product.title}}</h3>
+        <p>{{this.product.description}}</p>
+        <p>💲 {{this.product.price}} | Cantidad: {{this.quantity}}</p>
+
+        <!-- Botones para modificar cantidades -->
+        <button onclick="updateQuantity('{{this.product._id}}', {{this.quantity}} - 1)">➖</button>
+        <button onclick="updateQuantity('{{this.product._id}}', {{this.quantity}} + 1)">➕</button>
+        <button onclick="removeFromCart('{{this.product._id}}')">❌ Eliminar</button>
+      </li>
+      <hr>
+    {{/each}}
+  </ul>
+
+  <h3>Total: 💲 {{total}}</h3>
+  <button onclick="checkout()">✅ Finalizar compra</button>
+{{else}}
+  <p>Tu carrito está vacío 🛍️</p>
+{{/if}}
+
+<script>
+  const cartId = "{{cart._id}}"; // 📌 Necesitamos saber el ID del carrito
+
+  // Actualizar cantidad de un producto
+  async function updateQuantity(productId, newQuantity) {
+    if (newQuantity <= 0) return removeFromCart(productId);
+
+    try {
+      const res = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: newQuantity })
+      });
+      const data = await res.json();
+      if (data.status === "success") location.reload();
+      else alert("Error al actualizar");
+    } catch (error) {
+      alert("Error de servidor");
+    }
+  }
+
+  // Eliminar un producto
+  async function removeFromCart(productId) {
+    try {
+      const res = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (data.status === "success") location.reload();
+      else alert("Error al eliminar");
+    } catch (error) {
+      alert("Error de servidor");
+    }
+  }
+
+  // Finalizar compra
+  async function checkout() {
+    try {
+      const res = await fetch(`/api/carts/${cartId}/purchase`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        alert("✅ Compra realizada con éxito!");
+        window.location.href = "/profile"; // Redirigimos al perfil
+      } else {
+        alert("Error en la compra");
+      }
+    } catch (error) {
+      alert("Error de servidor");
+    }
+  }
+</script>

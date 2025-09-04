@@ -1,0 +1,13 @@
+<h2>Checkout</h2>
+<p>Usuario: {{user.email}}</p>
+
+<h3>Carrito</h3>
+<ul>
+  {{#each cart.products}}
+    <li>{{this.product.title}} - Cantidad: {{this.quantity}} - ${{this.product.price}}</li>
+  {{/each}}
+</ul>
+
+<form action="/api/carts/checkout" method="POST">
+  <button type="submit">Finalizar compra</button>
+</form>

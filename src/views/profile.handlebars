@@ -1,0 +1,43 @@
+<h1>👤 Perfil de {{user.first_name}} {{user.last_name}}</h1>
+
+<p><strong>Email:</strong> {{user.email}}</p>
+<p><strong>Edad:</strong> {{user.age}}</p>
+<p><strong>Rol:</strong> {{user.role}}</p>
+
+<hr>
+
+<h2>🛒 Carrito Actual</h2>
+{{#if cart.products.length}}
+  <ul>
+    {{#each cart.products}}
+      <li>
+        {{this.product.title}} - Cantidad: {{this.quantity}} - ${{this.product.price}}
+      </li>
+    {{/each}}
+  </ul>
+  <p><strong>Total:</strong> 
+    ${{cart.products.[0].product.price}}
+  </p>
+{{else}}
+  <p>Tu carrito está vacío.</p>
+{{/if}}
+
+<hr>
+
+<h2>📜 Historial de Compras</h2>
+{{#if tickets.length}}
+  <ul>
+    {{#each tickets}}
+      <li>
+        <h3>🧾 Ticket: {{this.code}}</h3>
+        <p>Fecha: {{this.purchase_datetime}}</p>
+        <p>Total: 💲 {{this.amount}}</p>
+        <hr>
+      </li>
+    {{/each}}
+  </ul>
+{{else}}
+  <p>No tienes compras registradas todavía 🛍️</p>
+{{/if}}
+
+<a href="/">⬅️ Volver al catálogo</a>

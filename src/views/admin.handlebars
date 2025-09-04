@@ -1,0 +1,64 @@
+<h1>⚙️ Panel de Administración</h1>
+<p>Bienvenido, {{user.first_name}} (rol: {{user.role}})</p>
+
+<hr>
+
+<h2>📦 Crear nuevo producto</h2>
+<form id="productForm">
+  <input type="text" id="title" placeholder="Título" required>
+  <input type="text" id="description" placeholder="Descripción" required>
+  <input type="number" id="price" placeholder="Precio" required>
+  <input type="text" id="category" placeholder="Categoría" required>
+  <input type="number" id="stock" placeholder="Stock" required>
+  <button type="submit">Agregar Producto</button>
+</form>
+
+<hr>
+
+<h2>📋 Lista de productos</h2>
+<ul id="productsList">
+  {{#each products}}
+    <li>
+      {{this.title}} - ${{this.price}} (Stock: {{this.stock}})
+      <button onclick="deleteProduct('{{this._id}}')">❌ Eliminar</button>
+    </li>
+  {{/each}}
+</ul>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  const productsList = document.getElementById("productsList");
+  const productForm = document.getElementById("productForm");
+
+  // Renderizar productos en tiempo real
+  socket.on("products", (products) => {
+    productsList.innerHTML = "";
+    products.forEach(p => {
+      const li = document.createElement("li");
+      li.innerHTML = `${p.title} - $${p.price} (Stock: ${p.stock})
+        <button onclick="deleteProduct('${p._id}')">❌ Eliminar</button>`;
+      productsList.appendChild(li);
+    });
+  });
+
+  // Crear producto
+  productForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const newProduct = {
+      title: document.getElementById("title").value,
+      description: document.getElementById("description").value,
+      price: document.getElementById("price").value,
+      category: document.getElementById("category").value,
+      stock: document.getElementById("stock").value,
+    };
+    socket.emit("newProduct", newProduct);
+    productForm.reset();
+  });
+
+  // Eliminar producto
+  function deleteProduct(id) {
+    socket.emit("deleteProduct", id);
+  }
+</script>

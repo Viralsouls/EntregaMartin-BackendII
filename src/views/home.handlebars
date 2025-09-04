@@ -1,0 +1,85 @@
+<h1>🛒 Bienvenido {{user.first_name}}!</h1>
+<p>Rol: {{user.role}}</p>
+<a href="/api/sessions/logout">Cerrar sesión</a>
+
+<hr>
+
+<h2>📦 Catálogo de Productos</h2>
+
+<!-- Barra de búsqueda y filtros -->
+<form id="filtersForm">
+  <input type="text" id="search" placeholder="Buscar producto...">
+  
+  <select id="category">
+    <option value="">Todas las categorías</option>
+    {{#each categories}}
+      <option value="{{this}}">{{this}}</option>
+    {{/each}}
+  </select>
+
+  <select id="sort">
+    <option value="">Ordenar</option>
+    <option value="asc">Precio Ascendente</option>
+    <option value="desc">Precio Descendente</option>
+  </select>
+
+  <button type="submit">Aplicar</button>
+</form>
+
+<hr>
+
+<!-- Lista de productos -->
+<div id="productsList">
+  {{#each products}}
+    <div>
+      <h3>{{this.title}}</h3>
+      <p>{{this.description}}</p>
+      <p>💲 {{this.price}} | Stock: {{this.stock}}</p>
+      <button onclick="addToCart('{{this._id}}')">Agregar al carrito</button>
+    </div>
+    <hr>
+  {{/each}}
+</div>
+
+<!-- Paginación -->
+<div>
+  {{#if hasPrevPage}}
+    <a href="?page={{prevPage}}&limit={{limit}}&category={{selectedCategory}}&sort={{selectedSort}}&search={{selectedSearch}}">⬅️ Anterior</a>
+  {{/if}}
+
+  <span>Página {{page}} de {{totalPages}}</span>
+
+  {{#if hasNextPage}}
+    <a href="?page={{nextPage}}&limit={{limit}}&category={{selectedCategory}}&sort={{selectedSort}}&search={{selectedSearch}}">Siguiente ➡️</a>
+  {{/if}}
+</div>
+
+<script>
+  // Filtros dinámicos
+  const filtersForm = document.getElementById("filtersForm");
+
+  filtersForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const search = document.getElementById("search").value;
+    const category = document.getElementById("category").value;
+    const sort = document.getElementById("sort").value;
+
+    const url = `/?search=${search}&category=${category}&sort=${sort}`;
+    window.location.href = url;
+  });
+
+  // Agregar producto al carrito
+  async function addToCart(productId) {
+    try {
+      const res = await fetch("/api/carts/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId }),
+      });
+      const data = await res.json();
+      alert("Producto agregado al carrito!");
+    } catch (error) {
+      alert("Error al agregar al carrito");
+    }
+  }
+</script>
