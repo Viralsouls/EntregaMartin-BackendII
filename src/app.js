@@ -1,78 +1,52 @@
 import express from "express";
-import mongoose from "mongoose";
-import cookieParser from "cookie-parser";
-import session from "express-session";
-import MongoStore from "connect-mongo";
 import handlebars from "express-handlebars";
-import passport from "passport";
+import { connectDB } from "./config/db.js";
 import dotenv from "dotenv";
-import { createServer } from "http";
-import { Server } from "socket.io";
+import __dirname from "./utils.js";
 
-import initializePassport from "./config/passport.config.js";
-import productRoutes from "./routes/products.routes.js";
-import cartRoutes from "./routes/carts.routes.js";
-import sessionRoutes from "./routes/sessions.routes.js";
-import userRoutes from "./routes/users.routes.js";
+// Rutas
+import productsRoutes from "./routes/products.routes.js";
+import cartsRoutes from "./routes/carts.routes.js";
 import viewsRoutes from "./routes/views.routes.js";
-import sockets from "./sockets.js";
-import { handlebarsHelpers } from "./utils/handlebars-helper.js";
+import sessionsRoutes from "./routes/sessions.routes.js";
 
+// Middlewares
+import cookieParser from "cookie-parser";
+import passport from "passport";
+import initializePassport from "./config/passport.config.js";
 
 dotenv.config();
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer);
+const PORT = process.env.PORT || 8080;
 
-// Middlewares
+// 🔹 Middlewares globales
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static("src/public"));
 
-// Handlebars
-app.engine("handlebars", handlebars.engine({
-  helpers: {
-    multiply: (a, b) => a * b,
-    sum: (products) => {
-      return products.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-    }
-  }
-}));
-app.set("views", "src/views");
-app.set("view engine", "handlebars");
-app.engine("handlebars", handlebars.engine({ helpers: handlebarsHelpers }));
-
-// MongoDB + Sessions
-mongoose.connect(process.env.MONGO_URL)
-  .then(() => console.log("✅ MongoDB conectado"))
-  .catch(err => console.error("❌ Error MongoDB:", err));
-
-app.use(session({
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URL,
-    ttl: 3600,
-  }),
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false
-}));
-
-// Passport
+// 🔹 Passport
 initializePassport();
 app.use(passport.initialize());
-app.use(passport.session());
 
-// Rutas
-app.use("/api/products", productRoutes);
-app.use("/api/carts", cartRoutes);
-app.use("/api/sessions", sessionRoutes);
-app.use("/api/users", userRoutes);
+// 🔹 Archivos estáticos
+app.use(express.static(__dirname + "/public"));
+
+// 🔹 Handlebars
+app.engine("handlebars", handlebars.engine());
+app.set("views", __dirname + "/views");
+app.set("view engine", "handlebars");
+
+// 🔹 Rutas
+app.use("/api/products", productsRoutes);
+app.use("/api/carts", cartsRoutes);
+app.use("/api/sessions", sessionsRoutes);
 app.use("/", viewsRoutes);
 
-// WebSockets
-sockets(io);
+// 🔹 Conectar a MongoDB y arrancar servidor
+const MONGO_URI = process.env.MONGO_URI;
 
-// Servidor
-const PORT = process.env.PORT || 8080;
-httpServer.listen(PORT, () => console.log(`🚀 Servidor escuchando en puerto ${PORT}`));
+connectDB(MONGO_URI).then(() => {
+  app.listen(PORT, () =>
+    console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
+  );
+});

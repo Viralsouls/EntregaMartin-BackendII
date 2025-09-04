@@ -1,25 +1,30 @@
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-export const authMiddleware = (roles = []) => {
-  return (req, res, next) => {
-    try {
-      const token = req.cookies.jwt; // 📌 Token viene en cookie (login)
-      if (!token) {
-        return res.status(401).json({ status: "error", error: "No autorizado, token faltante" });
-      }
+dotenv.config();
 
-      // Verificamos token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = decoded; // 📌 Guardamos el usuario en req.user
+export const authMiddleware = (req, res, next) => {
+  try {
+    // token desde cookie o header
+    const token =
+      (req.cookies && req.cookies.token) ||
+      (req.headers && req.headers.authorization
+        ? req.headers.authorization.split(" ")[1]
+        : null);
 
-      // Si hay roles definidos, validamos
-      if (roles.length && !roles.includes(decoded.role)) {
-        return res.status(403).json({ status: "error", error: "Acceso denegado: permisos insuficientes" });
-      }
-
-      next();
-    } catch (error) {
-      return res.status(401).json({ status: "error", error: "Token inválido o expirado" });
+    if (!token) {
+      return res
+        .status(401)
+        .json({ status: "error", message: "No autorizado, token faltante" });
     }
-  };
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+
+    next();
+  } catch (error) {
+    return res
+      .status(403)
+      .json({ status: "error", message: "Token inválido o expirado" });
+  }
 };

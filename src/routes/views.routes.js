@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authJwt } from "../middlewares/auth.js";
+import { authMiddleware } from "../middlewares/auth.js";
 import { authorizeRoles } from "../middlewares/authorization.js";
 import ProductModel from "../models/Product.model.js";
 import CartModel from "../models/Cart.model.js";
@@ -8,7 +8,7 @@ import TicketModel from "../models/Ticket.model.js";
 const router = Router();
 
 // Vista Home con productos + filtros
-router.get("/", authJwt, async (req, res) => {
+router.get("/", authMiddleware, async (req, res) => {
   try {
     const { page = 1, limit = 5, category, sort, search } = req.query;
 
@@ -59,7 +59,7 @@ router.get("/register", (req, res) => {
 });
 
 // Vista Perfil (para usuarios logueados)
-router.get("/profile", authJwt, async (req, res) => {
+router.get("/profile", authMiddleware, async (req, res) => {
   try {
     const cart = await CartModel.findById(req.user.cart).populate("products.product");
     const tickets = await TicketModel.find({ purchaser: req.user.email });
@@ -75,7 +75,7 @@ router.get("/profile", authJwt, async (req, res) => {
 });
 
 // Vista Carrito (independiente)
-router.get("/cart", authJwt, async (req, res) => {
+router.get("/cart", authMiddleware, async (req, res) => {
   try {
     const cart = await CartModel.findOne({ user: req.user._id })
       .populate("products.product")
@@ -94,7 +94,7 @@ router.get("/cart", authJwt, async (req, res) => {
 });
 
 // Vista Admin (solo rol admin)
-router.get("/admin", authJwt, authorizeRoles("admin"), async (req, res) => {
+router.get("/admin", authMiddleware, authorizeRoles("admin"), async (req, res) => {
   try {
     const products = await ProductModel.find();
     res.render("admin", { user: req.user, products });
