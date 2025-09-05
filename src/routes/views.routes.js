@@ -8,7 +8,7 @@ import TicketModel from "../models/Ticket.model.js";
 const router = Router();
 
 // Vista Home con productos + filtros
-router.get("/", authMiddleware, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const { page = 1, limit = 5, category, sort, search } = req.query;
 
@@ -29,7 +29,7 @@ router.get("/", authMiddleware, async (req, res) => {
     const categories = await ProductModel.distinct("category");
 
     res.render("home", {
-      user: req.user,
+      user: req.user || null, // opcional
       products: result.docs,
       page: result.page,
       totalPages: result.totalPages,
@@ -44,7 +44,8 @@ router.get("/", authMiddleware, async (req, res) => {
       selectedSearch: search || "",
     });
   } catch (error) {
-    res.status(500).send({ status: "error", error });
+    console.error("❌ Error en Home:", error.message);
+    res.status(500).render("error", { error: "Error cargando productos" });
   }
 });
 
@@ -61,20 +62,24 @@ router.get("/register", (req, res) => {
 // Vista Perfil (para usuarios logueados)
 router.get("/profile", authMiddleware, async (req, res) => {
   try {
-    const cart = await CartModel.findById(req.user.cart).populate("products.product");
-    const tickets = await TicketModel.find({ purchaser: req.user.email });
+    const cart = await CartModel.findById(req.user.cart)
+      .populate("products.product")
+      .lean();
 
-    res.render("profile", { 
-      user: req.user, 
-      cart, 
-      tickets 
+    const tickets = await TicketModel.find({ purchaser: req.user.email }).lean();
+
+    res.render("profile", {
+      user: req.user,
+      cart: cart || { products: [] },
+      tickets,
     });
   } catch (error) {
-    res.status(500).send({ status: "error", error });
+    console.error("❌ Error en Profile:", error.message);
+    res.status(500).render("error", { error: "Error cargando perfil" });
   }
 });
 
-// Vista Carrito (independiente)
+// Vista Carrito
 router.get("/cart", authMiddleware, async (req, res) => {
   try {
     const cart = await CartModel.findOne({ user: req.user._id })
@@ -86,24 +91,31 @@ router.get("/cart", authMiddleware, async (req, res) => {
     }
 
     const total = cart.products.reduce(
-      (acc, item) => acc + (item.product.price * item.quantity), 
+      (acc, item) => acc + (item.product.price * item.quantity),
       0
     );
 
     res.render("cart", { cart, total });
   } catch (error) {
-    res.status(500).send({ status: "error", error });
+    console.error("❌ Error en Cart:", error.message);
+    res.status(500).render("error", { error: "Error cargando carrito" });
   }
 });
 
 // Vista Admin (solo rol admin)
-router.get("/admin", authMiddleware, authorizeRole("admin"), async (req, res) => {
-  try {
-    const products = await ProductModel.find();
-    res.render("admin", { user: req.user, products });
-  } catch (error) {
-    res.status(500).send({ status: "error", error });
+router.get(
+  "/admin",
+  authMiddleware,
+  authorizeRole("admin"),
+  async (req, res) => {
+    try {
+      const products = await ProductModel.find().lean();
+      res.render("admin", { user: req.user, products });
+    } catch (error) {
+      console.error("❌ Error en Admin:", error.message);
+      res.status(500).render("error", { error: "Error cargando admin" });
+    }
   }
-});
+);
 
 export default router;

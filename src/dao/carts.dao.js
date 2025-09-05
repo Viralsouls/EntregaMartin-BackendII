@@ -1,51 +1,54 @@
 // src/dao/carts.dao.js
-
 import CartModel from "../models/Cart.model.js";
 
 export default class CartsDao {
   // Obtener todos los carritos
   async getCarts() {
-    try {
-      return await CartModel.find().populate("products.product");
-    } catch (error) {
-      throw new Error("Error fetching carts: " + error.message);
-    }
+    return await CartModel.find().populate("products.product");
   }
 
-  // Obtener un carrito por ID
+  // Obtener carrito por ID
   async getCartById(id) {
-    try {
-      return await CartModel.findById(id).populate("products.product");
-    } catch (error) {
-      throw new Error("Error fetching cart by ID: " + error.message);
-    }
+    return await CartModel.findById(id).populate("products.product");
   }
 
-  // Crear un carrito nuevo
+  // Obtener carrito por ID de usuario
+  async getCartByUserId(userId) {
+    return await CartModel.findOne({ user: userId }).populate("products.product");
+  }
+
+  // Crear carrito
   async addCart(cartData) {
-    try {
-      const newCart = new CartModel(cartData);
-      return await newCart.save();
-    } catch (error) {
-      throw new Error("Error creating cart: " + error.message);
-    }
+    return await CartModel.create(cartData);
   }
 
-  // Actualizar un carrito (ej: modificar productos dentro del carrito)
+  // Actualizar carrito
   async updateCart(id, cartData) {
-    try {
-      return await CartModel.findByIdAndUpdate(id, cartData, { new: true }).populate("products.product");
-    } catch (error) {
-      throw new Error("Error updating cart: " + error.message);
-    }
+    return await CartModel.findByIdAndUpdate(id, cartData, { new: true });
   }
 
-  // Eliminar un carrito
+  // Eliminar carrito
   async deleteCart(id) {
-    try {
-      return await CartModel.findByIdAndDelete(id);
-    } catch (error) {
-      throw new Error("Error deleting cart: " + error.message);
+    return await CartModel.findByIdAndDelete(id);
+  }
+
+  // ✅ Agregar producto a carrito
+  async addProductToCart(cartId, productId) {
+    const cart = await CartModel.findById(cartId);
+
+    if (!cart) return null;
+
+    const productIndex = cart.products.findIndex(
+      (p) => p.product.toString() === productId
+    );
+
+    if (productIndex !== -1) {
+      cart.products[productIndex].quantity += 1;
+    } else {
+      cart.products.push({ product: productId, quantity: 1 });
     }
+
+    await cart.save();
+    return await cart.populate("products.product");
   }
 }

@@ -1,5 +1,4 @@
 // src/routes/carts.routes.js
-
 import { Router } from "express";
 import CartsDao from "../dao/carts.dao.js";
 import { authMiddleware } from "../middlewares/auth.js";
@@ -70,6 +69,27 @@ router.delete("/:cid", authMiddleware, async (req, res) => {
     }
 
     res.status(200).send({ status: "success", message: "Cart deleted" });
+  } catch (error) {
+    res.status(500).send({ status: "error", message: error.message });
+  }
+});
+
+// ✅ Agregar producto al carrito del usuario
+router.post("/add", authMiddleware, async (req, res) => {
+  try {
+    const user = req.user; // authMiddleware añade el usuario
+    const { productId } = req.body;
+
+    // Buscar carrito del usuario o crearlo
+    let cart = await cartDao.getCartByUserId(user._id);
+    if (!cart) {
+      cart = await cartDao.addCart({ user: user._id, products: [] });
+    }
+
+    // Agregar producto
+    const updatedCart = await cartDao.addProductToCart(cart._id, productId);
+
+    res.status(200).send({ status: "success", payload: updatedCart });
   } catch (error) {
     res.status(500).send({ status: "error", message: error.message });
   }

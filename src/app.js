@@ -1,52 +1,45 @@
-import "dotenv/config.js";
 import express from "express";
-import cookieParser from "cookie-parser";
+import dotenv from "dotenv";
 import morgan from "morgan";
-import path from "path";
-import { fileURLToPath } from "url";
+import cookieParser from "cookie-parser";
 import { engine } from "express-handlebars";
-import { Server as SocketServer } from "socket.io";
+import { Server } from "socket.io";
 import http from "http";
 
-import connectDB from "./config/db.js";
-import productsRouter from "./routes/products.routes.js";
-import cartsRouter from "./routes/carts.routes.js";
-import viewsRouter from "./routes/views.routes.js";
-import authRouter from "./routes/auth.routes.js";
+// Config
+import { connectDB } from "./config/db.js";
 
-// 🔹 Inicializar Express
+// Rutas
+import productsRoutes from "./routes/products.routes.js";
+import cartsRoutes from "./routes/carts.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import viewsRoutes from "./routes/views.routes.js";
+
+dotenv.config();
+
 const app = express();
-const PORT = process.env.PORT || 8080;
+const server = http.createServer(app);
+const io = new Server(server);
 
-// 📂 Rutas absolutas para usar con vistas
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 🔹 Middlewares
+// Middlewares
+app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(morgan("dev"));
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static("public"));
 
-// 🔹 Handlebars config
+// Handlebars
 app.engine("handlebars", engine());
 app.set("view engine", "handlebars");
-app.set("views", path.join(__dirname, "views"));
+app.set("views", "./src/views");
 
-// 🔹 Rutas API y Vistas
-app.use("/api/products", productsRouter);
-app.use("/api/carts", cartsRouter);
-app.use("/api/auth", authRouter);
-app.use("/", viewsRouter);
+// Rutas
+app.use("/api/products", productsRoutes);
+app.use("/api/carts", cartsRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/", viewsRoutes);
 
-// 🔹 Conectar DB
-connectDB();
-
-// 🔹 Server + Socket.io
-const server = http.createServer(app);
-const io = new SocketServer(server);
-
+// Socket.io
 io.on("connection", (socket) => {
   console.log("🟢 Nuevo cliente conectado:", socket.id);
 
@@ -55,7 +48,9 @@ io.on("connection", (socket) => {
   });
 });
 
-// 🔹 Iniciar server
-server.listen(PORT, () => {
+// DB + Server
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, async () => {
+  await connectDB();
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
