@@ -1,40 +1,87 @@
 import { Router } from "express";
-import sessionsDAO from "../dao/sessions.dao.js";
+import jwt from "jsonwebtoken";
+import UserModel from "../models/User.model.js";
+import { createHash, isValidPassword } from "../utils/hash.js";
+import { authMiddleware } from "../middlewares/auth.js";
 
 const router = Router();
 
-// 📌 Registro
+// Registro de usuario
 router.post("/register", async (req, res) => {
   try {
-    const newUser = await sessionsDAO.register(req.body);
-    res.json({ status: "success", payload: newUser });
+    const { first_name, last_name, email, password, role } = req.body;
+
+    const exists = await UserModel.findOne({ email });
+    if (exists) {
+      return res.status(400).send({ status: "error", error: "User already exists" });
+    }
+
+    const hashedPassword = await createHash(password);
+
+    const newUser = await UserModel.create({
+      first_name,
+      last_name,
+      email,
+      password: hashedPassword,
+      role: role || "user",
+    });
+
+    res.redirect("/login");
   } catch (error) {
-    res.status(400).json({ status: "error", error: error.message });
+    console.error("Register error:", error);
+    res.status(500).send({ status: "error", error: "Failed to register user" });
   }
 });
 
-// 📌 Login
+// Login de usuario
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
   try {
-    const { user, token } = await sessionsDAO.login(email, password);
+    const { email, password } = req.body;
 
-    // Guardamos el token en cookie HTTPOnly
-    res.cookie("jwt", token, { httpOnly: true });
-    res.json({ status: "success", payload: user, token });
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      return res.status(400).send({ status: "error", error: "User not found" });
+    }
+
+    const validPassword = await isValidPassword(password, user.password);
+    if (!validPassword) {
+      return res.status(400).send({ status: "error", error: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    res.redirect("/");
   } catch (error) {
-    res.status(401).json({ status: "error", error: error.message });
+    console.error("Login error:", error);
+    res.status(500).send({ status: "error", error: "Login failed" });
   }
 });
 
-// 📌 Logout
-router.post("/logout", async (req, res) => {
+// Logout (borra cookie)
+router.get("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.redirect("/login");
+});
+
+// Obtener perfil del usuario actual (protegido)
+router.get("/current", authMiddleware, async (req, res) => {
   try {
-    const result = await sessionsDAO.logout();
-    res.clearCookie("jwt");
-    res.json({ status: "success", message: result.message });
+    const user = await UserModel.findById(req.user.id).lean();
+    if (!user) return res.status(404).send({ status: "error", error: "User not found" });
+
+    res.send({ status: "success", payload: user });
   } catch (error) {
-    res.status(500).json({ status: "error", error: error.message });
+    console.error("Current user error:", error);
+    res.status(500).send({ status: "error", error: "Failed to fetch current user" });
   }
 });
 

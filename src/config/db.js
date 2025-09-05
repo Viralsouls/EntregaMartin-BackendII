@@ -1,14 +1,15 @@
+// src/config/db.js
 import mongoose from "mongoose";
 
-export const connectDB = async (MONGO_URI) => {
+const connectDB = async () => {
   try {
-    await mongoose.connect(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("✅ Conectado a MongoDB Atlas");
+    await mongoose.connect(process.env.MONGO_URI);
+
+    console.log("✅ MongoDB conectado:", mongoose.connection.host);
   } catch (error) {
     console.error("❌ Error conectando a MongoDB:", error);
-    process.exit(1); // corta el servidor si falla
+    process.exit(1);
   }
 };
+
+export default connectDB;

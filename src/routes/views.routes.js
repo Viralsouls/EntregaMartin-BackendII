@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../middlewares/auth.js";
-import { authorizeRoles } from "../middlewares/authorization.js";
+import { authorizeRole } from "../middlewares/authorization.js";
 import ProductModel from "../models/Product.model.js";
 import CartModel from "../models/Cart.model.js";
 import TicketModel from "../models/Ticket.model.js";
@@ -85,7 +85,10 @@ router.get("/cart", authMiddleware, async (req, res) => {
       return res.render("cart", { cart: { products: [] }, total: 0 });
     }
 
-    const total = cart.products.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+    const total = cart.products.reduce(
+      (acc, item) => acc + (item.product.price * item.quantity), 
+      0
+    );
 
     res.render("cart", { cart, total });
   } catch (error) {
@@ -94,7 +97,7 @@ router.get("/cart", authMiddleware, async (req, res) => {
 });
 
 // Vista Admin (solo rol admin)
-router.get("/admin", authMiddleware, authorizeRoles("admin"), async (req, res) => {
+router.get("/admin", authMiddleware, authorizeRole("admin"), async (req, res) => {
   try {
     const products = await ProductModel.find();
     res.render("admin", { user: req.user, products });

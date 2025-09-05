@@ -1,30 +1,21 @@
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 export const authMiddleware = (req, res, next) => {
   try {
-    // token desde cookie o header
-    const token =
-      (req.cookies && req.cookies.token) ||
-      (req.headers && req.headers.authorization
-        ? req.headers.authorization.split(" ")[1]
-        : null);
+    // Leer token desde cookie o header
+    const token = req.cookies?.token || req.headers?.authorization?.split(" ")[1];
 
     if (!token) {
-      return res
-        .status(401)
-        .json({ status: "error", message: "No autorizado, token faltante" });
+      return res.status(401).send({ status: "error", error: "No token provided" });
     }
 
+    // Verificar token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded; // Guardamos el usuario en req
 
     next();
   } catch (error) {
-    return res
-      .status(403)
-      .json({ status: "error", message: "Token inválido o expirado" });
+    console.error("Auth error:", error.message);
+    return res.status(401).send({ status: "error", error: "Unauthorized" });
   }
 };

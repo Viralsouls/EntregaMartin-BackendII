@@ -1,25 +1,30 @@
+// src/dao/products.dao.js
+
 import ProductModel from "../models/Product.model.js";
 
-class ProductDAO {
-  async getAll(filter = {}, options = {}) {
-    return await ProductModel.paginate(filter, { ...options, lean: true });
+export default class ProductsDao {
+  async getProducts() {
+    try {
+      return await ProductModel.find();
+    } catch (error) {
+      throw new Error("Error fetching products: " + error.message);
+    }
   }
 
-  async getById(id) {
-    return await ProductModel.findById(id).lean();
+  async getProductById(id) {
+    try {
+      return await ProductModel.findById(id);
+    } catch (error) {
+      throw new Error("Error fetching product by ID: " + error.message);
+    }
   }
 
-  async create(productData) {
-    return await ProductModel.create(productData);
-  }
-
-  async update(id, updateData) {
-    return await ProductModel.findByIdAndUpdate(id, updateData, { new: true });
-  }
-
-  async delete(id) {
-    return await ProductModel.findByIdAndDelete(id);
+  async addProduct(productData) {
+    try {
+      const newProduct = new ProductModel(productData);
+      return await newProduct.save();
+    } catch (error) {
+      throw new Error("Error adding product: " + error.message);
+    }
   }
 }
-
-export default new ProductDAO();

@@ -1,59 +1,60 @@
 import { Router } from "express";
+import ProductDao from "../dao/products.dao.js";
 import { authMiddleware } from "../middlewares/auth.js";
-import productDAO from "../dao/products.dao.js";
 
 const router = Router();
+const productDao = new ProductDao();
 
-// ✅ Obtener todos los productos (público)
+// Obtener todos los productos
 router.get("/", async (req, res) => {
   try {
-    const products = await productDAO.getAll();
+    const products = await productDao.getAll();
     res.json({ status: "success", payload: products });
   } catch (error) {
-    res.status(500).json({ status: "error", error: error.message });
+    res.status(500).json({ status: "error", message: error.message });
   }
 });
 
-// ✅ Obtener un producto por ID (público)
-router.get("/:id", async (req, res) => {
+// Obtener un producto por ID
+router.get("/:pid", async (req, res) => {
   try {
-    const product = await productDAO.getById(req.params.id);
-    if (!product) return res.status(404).json({ status: "error", error: "Producto no encontrado" });
+    const product = await productDao.getById(req.params.pid);
+    if (!product) {
+      return res.status(404).json({ status: "error", message: "Producto no encontrado" });
+    }
     res.json({ status: "success", payload: product });
   } catch (error) {
-    res.status(500).json({ status: "error", error: error.message });
+    res.status(500).json({ status: "error", message: error.message });
   }
 });
 
-// ✅ Crear producto (solo admin)
-router.post("/", authMiddleware(["admin"]), async (req, res) => {
+// Crear un producto (requiere login)
+router.post("/", authMiddleware, async (req, res) => {
   try {
-    const newProduct = await productDAO.create(req.body);
-    res.json({ status: "success", payload: newProduct });
+    const newProduct = await productDao.create(req.body);
+    res.status(201).json({ status: "success", payload: newProduct });
   } catch (error) {
-    res.status(400).json({ status: "error", error: error.message });
+    res.status(500).json({ status: "error", message: error.message });
   }
 });
 
-// ✅ Actualizar producto (solo admin)
-router.put("/:id", authMiddleware(["admin"]), async (req, res) => {
+// Actualizar un producto
+router.put("/:pid", authMiddleware, async (req, res) => {
   try {
-    const updatedProduct = await productDAO.update(req.params.id, req.body);
-    if (!updatedProduct) return res.status(404).json({ status: "error", error: "Producto no encontrado" });
+    const updatedProduct = await productDao.update(req.params.pid, req.body);
     res.json({ status: "success", payload: updatedProduct });
   } catch (error) {
-    res.status(400).json({ status: "error", error: error.message });
+    res.status(500).json({ status: "error", message: error.message });
   }
 });
 
-// ✅ Eliminar producto (solo admin)
-router.delete("/:id", authMiddleware(["admin"]), async (req, res) => {
+// Eliminar un producto
+router.delete("/:pid", authMiddleware, async (req, res) => {
   try {
-    const deleted = await productDAO.delete(req.params.id);
-    if (!deleted) return res.status(404).json({ status: "error", error: "Producto no encontrado" });
-    res.json({ status: "success", payload: deleted });
+    await productDao.delete(req.params.pid);
+    res.json({ status: "success", message: "Producto eliminado" });
   } catch (error) {
-    res.status(500).json({ status: "error", error: error.message });
+    res.status(500).json({ status: "error", message: error.message });
   }
 });
 

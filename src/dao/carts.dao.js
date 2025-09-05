@@ -1,54 +1,51 @@
+// src/dao/carts.dao.js
+
 import CartModel from "../models/Cart.model.js";
 
-class CartDAO {
-  async getByUser(userId) {
-    return await CartModel.findOne({ user: userId }).populate("products.product").lean();
-  }
-
-  async create(userId) {
-    return await CartModel.create({ user: userId, products: [] });
-  }
-
-  async addProduct(userId, productId, quantity = 1) {
-    const cart = await CartModel.findOne({ user: userId });
-    if (!cart) return null;
-
-    const existingProduct = cart.products.find(p => p.product.toString() === productId);
-    if (existingProduct) {
-      existingProduct.quantity += quantity;
-    } else {
-      cart.products.push({ product: productId, quantity });
+export default class CartsDao {
+  // Obtener todos los carritos
+  async getCarts() {
+    try {
+      return await CartModel.find().populate("products.product");
+    } catch (error) {
+      throw new Error("Error fetching carts: " + error.message);
     }
-
-    return await cart.save();
   }
 
-  async updateProduct(userId, productId, quantity) {
-    const cart = await CartModel.findOne({ user: userId });
-    if (!cart) return null;
-
-    const product = cart.products.find(p => p.product.toString() === productId);
-    if (!product) return null;
-
-    product.quantity = quantity;
-    return await cart.save();
+  // Obtener un carrito por ID
+  async getCartById(id) {
+    try {
+      return await CartModel.findById(id).populate("products.product");
+    } catch (error) {
+      throw new Error("Error fetching cart by ID: " + error.message);
+    }
   }
 
-  async removeProduct(userId, productId) {
-    const cart = await CartModel.findOne({ user: userId });
-    if (!cart) return null;
-
-    cart.products = cart.products.filter(p => p.product.toString() !== productId);
-    return await cart.save();
+  // Crear un carrito nuevo
+  async addCart(cartData) {
+    try {
+      const newCart = new CartModel(cartData);
+      return await newCart.save();
+    } catch (error) {
+      throw new Error("Error creating cart: " + error.message);
+    }
   }
 
-  async clearCart(userId) {
-    return await CartModel.findOneAndUpdate(
-      { user: userId },
-      { products: [] },
-      { new: true }
-    );
+  // Actualizar un carrito (ej: modificar productos dentro del carrito)
+  async updateCart(id, cartData) {
+    try {
+      return await CartModel.findByIdAndUpdate(id, cartData, { new: true }).populate("products.product");
+    } catch (error) {
+      throw new Error("Error updating cart: " + error.message);
+    }
+  }
+
+  // Eliminar un carrito
+  async deleteCart(id) {
+    try {
+      return await CartModel.findByIdAndDelete(id);
+    } catch (error) {
+      throw new Error("Error deleting cart: " + error.message);
+    }
   }
 }
-
-export default new CartDAO();
