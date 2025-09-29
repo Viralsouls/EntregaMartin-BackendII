@@ -1,6 +1,7 @@
 import { Router } from "express";
 import ProductDao from "../dao/products.dao.js";
 import { authMiddleware } from "../middlewares/auth.js";
+import { authorizeRole } from "../middlewares/authorization.js";
 
 const router = Router();
 const productDao = new ProductDao();
@@ -29,7 +30,7 @@ router.get("/:pid", async (req, res) => {
 });
 
 // Crear un producto (requiere login)
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", authMiddleware, authorizeRole("admin"), async (req, res) => {
   try {
     const newProduct = await productDao.create(req.body);
     res.status(201).json({ status: "success", payload: newProduct });
@@ -39,7 +40,7 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 
 // Actualizar un producto
-router.put("/:pid", authMiddleware, async (req, res) => {
+router.put("/:pid", authMiddleware, authorizeRole("admin"), async (req, res) => {
   try {
     const updatedProduct = await productDao.update(req.params.pid, req.body);
     res.json({ status: "success", payload: updatedProduct });
@@ -49,7 +50,7 @@ router.put("/:pid", authMiddleware, async (req, res) => {
 });
 
 // Eliminar un producto
-router.delete("/:pid", authMiddleware, async (req, res) => {
+router.delete("/:pid", authMiddleware, authorizeRole("admin"), async (req, res) => {
   try {
     await productDao.delete(req.params.pid);
     res.json({ status: "success", message: "Producto eliminado" });

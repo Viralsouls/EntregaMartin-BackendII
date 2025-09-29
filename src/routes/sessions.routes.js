@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import UserModel from "../models/User.model.js";
 import { createHash, isValidPassword } from "../utils/hash.js";
 import { authMiddleware } from "../middlewares/auth.js";
+import UserDTO from "../dtos/user.dto.js";
 
 const router = Router();
 
@@ -77,10 +78,9 @@ router.get("/current", authMiddleware, async (req, res) => {
   try {
     const user = await UserModel.findById(req.user.id).lean();
     if (!user) return res.status(404).send({ status: "error", error: "User not found" });
-
-    res.send({ status: "success", payload: user });
-  } catch (error) {
-    console.error("Current user error:", error);
+    const safeUser = new UserDTO(user);
+    res.send({ status: "success", payload: safeUser });
+  } catch (e) {
     res.status(500).send({ status: "error", error: "Failed to fetch current user" });
   }
 });

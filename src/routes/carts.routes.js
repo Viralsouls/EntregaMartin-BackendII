@@ -1,12 +1,22 @@
 // src/routes/carts.routes.js
+
 import { Router } from "express";
 import CartsDao from "../dao/carts.dao.js";
 import { authMiddleware } from "../middlewares/auth.js";
+import { authorizeRole } from "../middlewares/authorization.js";
+
+// Servicios de negocio (Repository pattern por debajo)
+import { addToUserCart } from "../services/carts.service.js";
+import { checkoutCart } from "../services/purchase.service.js";
 
 const router = Router();
 const cartDao = new CartsDao();
 
-// ✅ Obtener todos los carritos
+/* =========================
+ *         CRUD
+ * ========================= */
+
+// Obtener todos los carritos (podrías restringirlo a admin si querés)
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const carts = await cartDao.getCarts();
@@ -16,23 +26,21 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Obtener un carrito por ID
+// Obtener un carrito por ID
 router.get("/:cid", authMiddleware, async (req, res) => {
   try {
     const { cid } = req.params;
     const cart = await cartDao.getCartById(cid);
-
     if (!cart) {
       return res.status(404).send({ status: "error", message: "Cart not found" });
     }
-
     res.status(200).send({ status: "success", payload: cart });
   } catch (error) {
     res.status(500).send({ status: "error", message: error.message });
   }
 });
 
-// ✅ Crear un carrito nuevo
+// Crear un carrito
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const newCart = await cartDao.addCart(req.body);
@@ -42,54 +50,64 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Actualizar un carrito por ID
+// Actualizar un carrito por ID (reemplazo/edición del contenido)
 router.put("/:cid", authMiddleware, async (req, res) => {
   try {
     const { cid } = req.params;
     const updatedCart = await cartDao.updateCart(cid, req.body);
-
     if (!updatedCart) {
       return res.status(404).send({ status: "error", message: "Cart not found" });
     }
-
     res.status(200).send({ status: "success", payload: updatedCart });
   } catch (error) {
     res.status(500).send({ status: "error", message: error.message });
   }
 });
 
-// ✅ Eliminar un carrito por ID
+// Eliminar un carrito por ID
 router.delete("/:cid", authMiddleware, async (req, res) => {
   try {
     const { cid } = req.params;
     const deletedCart = await cartDao.deleteCart(cid);
-
     if (!deletedCart) {
       return res.status(404).send({ status: "error", message: "Cart not found" });
     }
-
     res.status(200).send({ status: "success", message: "Cart deleted" });
   } catch (error) {
     res.status(500).send({ status: "error", message: error.message });
   }
 });
 
-// ✅ Agregar producto al carrito del usuario
-router.post("/add", authMiddleware, async (req, res) => {
-  try {
-    const user = req.user; // authMiddleware añade el usuario
-    const { productId } = req.body;
+/* =========================
+ *    Operaciones de compra
+ * ========================= */
 
-    // Buscar carrito del usuario o crearlo
-    let cart = await cartDao.getCartByUserId(user._id);
-    if (!cart) {
-      cart = await cartDao.addCart({ user: user._id, products: [] });
+// Agregar producto al carrito del usuario logueado (solo rol user)
+router.post("/add", authMiddleware, authorizeRole("user"), async (req, res) => {
+  try {
+    const { productId, quantity = 1 } = req.body;
+    if (!productId) {
+      return res.status(400).send({ status: "error", message: "productId is required" });
     }
 
-    // Agregar producto
-    const updatedCart = await cartDao.addProductToCart(cart._id, productId);
+    const cart = await addToUserCart({
+      userId: req.user._id,
+      productId,
+      quantity: Number.isFinite(quantity) ? Number(quantity) : 1,
+    });
 
-    res.status(200).send({ status: "success", payload: updatedCart });
+    res.status(200).send({ status: "success", payload: cart });
+  } catch (error) {
+    res.status(400).send({ status: "error", message: error.message });
+  }
+});
+
+// Finalizar compra del carrito del usuario (solo rol user)
+router.post("/purchase", authMiddleware, authorizeRole("user"), async (req, res) => {
+  try {
+    const result = await checkoutCart({ user: req.user });
+    // result: { completed: boolean, ticket, rejected: [ { product, wanted, available } ] }
+    res.status(200).send({ status: "success", ...result });
   } catch (error) {
     res.status(500).send({ status: "error", message: error.message });
   }
